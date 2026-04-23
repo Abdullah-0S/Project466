@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
+import { ListTodo, Pencil, Trash2, X, Plus } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { FormField } from "@/components/ui/form-field";
+import { Table, TableWrapper, THead, TBody, TR, TH, TD } from "@/components/ui/table";
+import { EmptyState } from "@/components/ui/empty-state";
+import { cn } from "@/lib/utils";
+import { addDaysToDate, daysBetweenInclusive, formatDate } from "@/lib/dates";
 
 interface Task {
   id: number;
@@ -11,53 +20,24 @@ interface Task {
   finishDate: string;
 }
 
-// Helper function to add days to a date string
-const addDaysToDate = (dateStr: string, days: number): string => {
-  if (!dateStr) return "";
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return ""; // Handle invalid dates
-  date.setDate(date.getDate() + days);
-  return date.toISOString().split('T')[0];
-};
-
-// Helper function to calculate days between two dates (including start day)
-const calculateDaysBetween = (startDate: string, finishDate: string): number => {
-  if (!startDate || !finishDate) return 0;
-  const start = new Date(startDate);
-  const end = new Date(finishDate);
-  if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
-
-  // Calculate difference in milliseconds
-  const diffTime = end.getTime() - start.getTime();
-  // Convert to days and add 1 to include the starting day
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-};
+const emptyForm = { name: "", duration: "", startDate: "", finishDate: "" };
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState({
-    name: "",
-    duration: "",
-    startDate: "",
-    finishDate: "",
-  });
+  const [formData, setFormData] = useState(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  // Load tasks from API on mount
   useEffect(() => {
     fetchTasks();
   }, []);
 
   const fetchTasks = async () => {
     try {
-      const res = await fetch('/api/tasks');
-      if (res.ok) {
-        const data = await res.json();
-        setTasks(data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch tasks:', error);
+      const res = await fetch("/api/tasks");
+      if (res.ok) setTasks(await res.json());
+    } catch (e) {
+      console.error("Failed to fetch tasks:", e);
     } finally {
       setLoading(false);
     }
@@ -65,36 +45,31 @@ export default function TasksPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     const taskData = {
       name: formData.name,
       duration: parseInt(formData.duration) || 0,
       startDate: formData.startDate,
       finishDate: formData.finishDate,
     };
-
     try {
       if (editingId) {
-        // Update existing task
-        await fetch('/api/tasks', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+        await fetch("/api/tasks", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: editingId, ...taskData }),
         });
         setEditingId(null);
       } else {
-        // Add new task
-        await fetch('/api/tasks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        await fetch("/api/tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(taskData),
         });
       }
-
       await fetchTasks();
-      setFormData({ name: "", duration: "", startDate: "", finishDate: "" });
-    } catch (error) {
-      console.error('Failed to save task:', error);
+      setFormData(emptyForm);
+    } catch (e) {
+      console.error("Failed to save task:", e);
     }
   };
 
@@ -109,49 +84,55 @@ export default function TasksPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm("Are you sure you want to delete this task?")) {
-      try {
-        await fetch(`/api/tasks?id=${id}`, { method: 'DELETE' });
-        await fetchTasks();
-      } catch (error) {
-        console.error('Failed to delete task:', error);
+    if (!confirm("Are you sure you want to delete this task?")) return;
+    try {
+      await fetch(`/api/tasks?id=${id}`, { method: "DELETE" });
+      await fetchTasks();
+      if (editingId === id) {
+        setEditingId(null);
+        setFormData(emptyForm);
       }
+    } catch (e) {
+      console.error("Failed to delete task:", e);
     }
   };
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setFormData({ name: "", duration: "", startDate: "", finishDate: "" });
+    setFormData(emptyForm);
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="bg-primary text-white p-6 shadow-lg">
-        <Link href="/" className="text-blue-200 hover:text-white mb-4 inline-block">← Back to Home</Link>
-        <h1 className="text-3xl font-bold mt-2">Tasks Management</h1>
-      </div>
+    <div className="mx-auto w-full max-w-6xl">
+      <PageHeader
+        title="Tasks"
+        description="Plan project tasks with durations and dates."
+      />
 
-      <div className="container mx-auto mt-8 p-6">
-        {/* Add/Edit Form */}
-        <div className="bg-white p-6 rounded-lg shadow mb-8">
-          <h2 className="text-xl font-semibold mb-4">
-            {editingId ? "Edit Task" : "Add New Task"}
-          </h2>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Task Name</label>
-              <input
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>{editingId ? "Edit Task" : "Add New Task"}</CardTitle>
+          <CardDescription>
+            {editingId
+              ? `Updating task #${editingId}.`
+              : "Enter task details. Duration and finish date auto-sync with the start date."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <FormField label="Task Name" htmlFor="task-name">
+              <Input
+                id="task-name"
                 type="text"
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-primary focus:border-primary"
                 placeholder="e.g., Problem Identification"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Duration (Days)</label>
-              <input
+            </FormField>
+            <FormField label="Duration (Days)" htmlFor="task-duration">
+              <Input
+                id="task-duration"
                 type="number"
                 required
                 min="0"
@@ -160,144 +141,158 @@ export default function TasksPage() {
                 onChange={(e) => {
                   const newDuration = e.target.value;
                   const days = parseInt(newDuration);
-
-                  // Auto-calculate finish date if start date is set
                   if (!isNaN(days) && days >= 0 && formData.startDate) {
-                    const calculatedFinish = addDaysToDate(formData.startDate, days);
-                    setFormData({ ...formData, duration: newDuration, finishDate: calculatedFinish });
+                    setFormData({
+                      ...formData,
+                      duration: newDuration,
+                      finishDate: addDaysToDate(formData.startDate, days),
+                    });
                   } else {
                     setFormData({ ...formData, duration: newDuration });
                   }
                 }}
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-primary focus:border-primary"
                 placeholder="e.g., 5"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-              <input
+            </FormField>
+            <FormField label="Start Date" htmlFor="task-start">
+              <Input
+                id="task-start"
                 type="date"
                 required
                 value={formData.startDate}
                 onChange={(e) => {
                   const newStartDate = e.target.value;
-
-                  // Auto-calculate finish date if duration is set
                   if (formData.duration) {
                     const days = parseInt(formData.duration);
                     if (!isNaN(days) && days >= 0) {
-                      const calculatedFinish = addDaysToDate(newStartDate, days);
-                      setFormData({ ...formData, startDate: newStartDate, finishDate: calculatedFinish });
-                    } else {
-                      setFormData({ ...formData, startDate: newStartDate });
+                      setFormData({
+                        ...formData,
+                        startDate: newStartDate,
+                        finishDate: addDaysToDate(newStartDate, days),
+                      });
+                      return;
                     }
-                  } else if (formData.finishDate) {
-                    // Auto-calculate duration if finish date is set
-                    const days = calculateDaysBetween(newStartDate, formData.finishDate);
-                    setFormData({ ...formData, startDate: newStartDate, duration: days.toString() });
-                  } else {
-                    setFormData({ ...formData, startDate: newStartDate });
                   }
+                  if (formData.finishDate) {
+                    setFormData({
+                      ...formData,
+                      startDate: newStartDate,
+                      duration: daysBetweenInclusive(newStartDate, formData.finishDate).toString(),
+                    });
+                    return;
+                  }
+                  setFormData({ ...formData, startDate: newStartDate });
                 }}
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-primary focus:border-primary"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Finish Date</label>
-              <input
+            </FormField>
+            <FormField label="Finish Date" htmlFor="task-finish">
+              <Input
+                id="task-finish"
                 type="date"
                 required
                 value={formData.finishDate}
                 onChange={(e) => {
                   const newFinishDate = e.target.value;
-
-                  // Auto-calculate duration if start date is set
                   if (formData.startDate) {
-                    const days = calculateDaysBetween(formData.startDate, newFinishDate);
-                    setFormData({ ...formData, finishDate: newFinishDate, duration: days.toString() });
+                    setFormData({
+                      ...formData,
+                      finishDate: newFinishDate,
+                      duration: daysBetweenInclusive(formData.startDate, newFinishDate).toString(),
+                    });
                   } else {
                     setFormData({ ...formData, finishDate: newFinishDate });
                   }
                 }}
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-primary focus:border-primary"
               />
-            </div>
-            <div className="md:col-span-2 lg:col-span-4 flex gap-2">
-              <button
-                type="submit"
-                className="bg-primary text-white px-6 py-2 rounded hover:bg-blue-600 transition-colors"
-              >
+            </FormField>
+            <div className="md:col-span-2 flex flex-wrap items-center gap-2 pt-1">
+              <Button type="submit">
+                {editingId ? <Pencil /> : <Plus />}
                 {editingId ? "Update Task" : "Add Task"}
-              </button>
-              {editingId && (
-                <button
-                  type="button"
-                  onClick={handleCancelEdit}
-                  className="bg-gray-400 text-white px-6 py-2 rounded hover:bg-gray-500 transition-colors"
-                >
-                  Cancel
-                </button>
-              )}
+              </Button>
+              {editingId ? (
+                <Button type="button" variant="outline" onClick={handleCancelEdit}>
+                  <X /> Cancel
+                </Button>
+              ) : null}
             </div>
           </form>
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* Tasks Table */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="p-6 border-b">
-            <h2 className="text-xl font-semibold">All Tasks</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration (Days)</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Finish Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {loading ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500">Loading...</td>
-                  </tr>
-                ) : tasks.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500">No tasks yet. Add your first task above.</td>
-                  </tr>
-                ) : (
-                  tasks.map((task) => (
-                    <tr key={task.id} className={editingId === task.id ? "bg-blue-50" : ""}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{task.id}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{task.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{task.duration} days</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{task.startDate}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{task.finishDate}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
-                        <button
-                          onClick={() => handleEdit(task)}
-                          className="text-blue-600 hover:text-blue-800"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(task.id)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>All Tasks</CardTitle>
+          <CardDescription>
+            {loading ? "Loading…" : `${tasks.length} ${tasks.length === 1 ? "task" : "tasks"} on file.`}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <TableWrapper>
+            {loading ? (
+              <div className="px-6 py-10 text-center text-sm text-muted-foreground">Loading tasks…</div>
+            ) : tasks.length === 0 ? (
+              <div className="p-6">
+                <EmptyState
+                  icon={ListTodo}
+                  title="No tasks yet"
+                  description="Use the form above to create your first task."
+                />
+              </div>
+            ) : (
+              <Table>
+                <THead>
+                  <TR>
+                    <TH className="w-16">ID</TH>
+                    <TH>Task Name</TH>
+                    <TH>Duration</TH>
+                    <TH>Start Date</TH>
+                    <TH>Finish Date</TH>
+                    <TH className="text-right">Actions</TH>
+                  </TR>
+                </THead>
+                <TBody>
+                  {tasks.map((task) => (
+                    <TR
+                      key={task.id}
+                      className={cn(editingId === task.id && "bg-primary/5 hover:bg-primary/10")}
+                    >
+                      <TD className="font-medium text-muted-foreground">#{task.id}</TD>
+                      <TD className="font-medium text-foreground">{task.name}</TD>
+                      <TD className="whitespace-nowrap">{task.duration} days</TD>
+                      <TD className="whitespace-nowrap">{formatDate(task.startDate)}</TD>
+                      <TD className="whitespace-nowrap">{formatDate(task.finishDate)}</TD>
+                      <TD className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleEdit(task)}
+                            aria-label={`Edit ${task.name}`}
+                            title="Edit"
+                          >
+                            <Pencil />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleDelete(task.id)}
+                            aria-label={`Delete ${task.name}`}
+                            title="Delete"
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            <Trash2 />
+                          </Button>
+                        </div>
+                      </TD>
+                    </TR>
+                  ))}
+                </TBody>
+              </Table>
+            )}
+          </TableWrapper>
+        </CardContent>
+      </Card>
     </div>
   );
 }

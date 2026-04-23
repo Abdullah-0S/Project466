@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
+import { Users } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableWrapper, THead, TBody, TR, TH, TD } from "@/components/ui/table";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Badge } from "@/components/ui/badge";
 
 interface Resource {
   id: number;
@@ -9,6 +14,7 @@ interface Resource {
   type: string;
   max: string;
   stRate: string;
+  ovtRate?: string;
   costUse: string;
 }
 
@@ -18,54 +24,71 @@ export default function ReportResourcesPage() {
   useEffect(() => {
     const saved = localStorage.getItem("resources");
     if (saved) {
-      setResources(JSON.parse(saved));
+      try {
+        setResources(JSON.parse(saved));
+      } catch (e) {
+        console.error("Error parsing resources:", e);
+      }
     }
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="bg-primary text-white p-6 shadow-lg">
-        <Link href="/" className="text-blue-200 hover:text-white mb-4 inline-block">← Back to Home</Link>
-        <h1 className="text-3xl font-bold mt-2">Report: All Resources</h1>
-      </div>
+    <div className="mx-auto w-full max-w-6xl">
+      <PageHeader
+        title="Report — All Resources"
+        description="Read-only list of every resource."
+      />
 
-      <div className="container mx-auto mt-8 p-6">
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="p-6 border-b">
-            <h2 className="text-xl font-semibold">All Resources (View Only)</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Resource Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type (List)</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Max (No. of resources)</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">St. Rate</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ovt. Cost/Use</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {resources.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-4 text-center text-gray-500">No resources to display.</td>
-                  </tr>
-                ) : (
-                  resources.map((resource) => (
-                    <tr key={resource.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{resource.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{resource.type}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{resource.max}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{resource.stRate}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{resource.costUse}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>All Resources</CardTitle>
+          <CardDescription>
+            {resources.length === 0
+              ? "No resources."
+              : `${resources.length} ${resources.length === 1 ? "resource" : "resources"}.`}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <TableWrapper>
+            {resources.length === 0 ? (
+              <div className="p-6">
+                <EmptyState icon={Users} title="No resources to display" description="Add resources first to see them here." />
+              </div>
+            ) : (
+              <Table>
+                <THead>
+                  <TR>
+                    <TH>Name</TH>
+                    <TH>Type</TH>
+                    <TH>Max</TH>
+                    <TH>St. Rate</TH>
+                    <TH>Ovt. Rate</TH>
+                    <TH>Cost / Use</TH>
+                  </TR>
+                </THead>
+                <TBody>
+                  {resources.map((r) => (
+                    <TR key={r.id}>
+                      <TD className="font-medium text-foreground">{r.name}</TD>
+                      <TD>
+                        {r.type ? (
+                          <Badge variant={r.type === "Work" ? "default" : "outline"}>{r.type}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TD>
+                      <TD>{r.max || "—"}</TD>
+                      <TD>{r.stRate || "—"}</TD>
+                      <TD>{r.ovtRate || "—"}</TD>
+                      <TD>{r.costUse || "—"}</TD>
+                    </TR>
+                  ))}
+                </TBody>
+              </Table>
+            )}
+          </TableWrapper>
+        </CardContent>
+      </Card>
     </div>
   );
 }

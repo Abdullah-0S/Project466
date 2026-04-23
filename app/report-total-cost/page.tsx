@@ -1,138 +1,107 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-
-interface Task {
-  id: number;
-  name: string;
-  duration: string;
-  startDate: string;
-  finishDate: string;
-}
-
-interface Resource {
-  id: number;
-  name: string;
-  type: string;
-  max: string;
-  stRate: string;
-  costUse: string;
-}
-
-interface TaskAllocation {
-  taskId: number;
-  resourceIds: number[];
-}
+import { PieChart as PieChartIcon, DollarSign } from "lucide-react";
+import {
+  calculateTaskCost,
+  calculateTotalProjectCost,
+  getResourceNamesForTask,
+} from "@/lib/cost";
+import { PageHeader } from "@/components/ui/page-header";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatCard } from "@/components/ui/stat-card";
+import { Table, TableWrapper, THead, TBody, TFoot, TR, TH, TD } from "@/components/ui/table";
+import { EmptyState } from "@/components/ui/empty-state";
+import { useProjectData } from "@/lib/use-project-data";
+import { formatCurrency } from "@/lib/utils";
+import { formatDate } from "@/lib/dates";
 
 export default function ReportTotalCostPage() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [resources, setResources] = useState<Resource[]>([]);
-  const [allocations, setAllocations] = useState<TaskAllocation[]>([]);
-
-  useEffect(() => {
-    const savedTasks = localStorage.getItem("tasks");
-    const savedResources = localStorage.getItem("resources");
-    const savedAllocations = localStorage.getItem("allocations");
-
-    if (savedTasks) setTasks(JSON.parse(savedTasks));
-    if (savedResources) setResources(JSON.parse(savedResources));
-    if (savedAllocations) setAllocations(JSON.parse(savedAllocations));
-  }, []);
-
-  const getResourceNames = (taskId: number) => {
-    const allocation = allocations.find(a => a.taskId === taskId);
-    if (!allocation) return "None";
-    return allocation.resourceIds
-      .map(id => resources.find(r => r.id === id)?.name)
-      .filter(Boolean)
-      .join(", ");
-  };
-
-  const calculateTaskCost = (taskId: number): number => {
-    const allocation = allocations.find(a => a.taskId === taskId);
-    if (!allocation) return 0;
-
-    let totalCost = 0;
-
-    allocation.resourceIds.forEach(resourceId => {
-      const resource = resources.find(r => r.id === resourceId);
-      if (resource) {
-        const costUse = parseFloat(resource.costUse.replace(/[^0-9.-]+/g, ""));
-        if (!isNaN(costUse)) {
-          totalCost += costUse;
-        }
-      }
-    });
-
-    return totalCost;
-  };
-
-  const calculateTotalProjectCost = (): number => {
-    return tasks.reduce((total, task) => total + calculateTaskCost(task.id), 0);
-  };
+  const { tasks, resources, allocations, loading } = useProjectData();
+  const total = calculateTotalProjectCost(tasks, resources, allocations);
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="bg-primary text-white p-6 shadow-lg">
-        <Link href="/" className="text-blue-200 hover:text-white mb-4 inline-block">← Back to Home</Link>
-        <h1 className="text-3xl font-bold mt-2">Report: Total Cost for Whole Project</h1>
+    <div className="mx-auto w-full max-w-6xl">
+      <PageHeader
+        title="Report — Total Project Cost"
+        description="Task-wise breakdown with a grand total for the project."
+      />
+
+      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+        <StatCard
+          label="Grand Total"
+          value={loading ? "—" : formatCurrency(total)}
+          hint="Sum of all task costs"
+          icon={DollarSign}
+          accent="success"
+        />
+        <StatCard
+          label="Tasks Counted"
+          value={loading ? "—" : tasks.length}
+          hint={tasks.length === 1 ? "task" : "tasks"}
+          icon={PieChartIcon}
+        />
       </div>
 
-      <div className="container mx-auto mt-8 p-6">
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="p-6 border-b">
-            <h2 className="text-xl font-semibold">Total Cost for Whole Project (Task Wise)</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start (Date)</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Finish (Date)</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Resource Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Cost</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {tasks.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-4 text-center text-gray-500">No tasks to display.</td>
-                  </tr>
-                ) : (
-                  tasks.map((task) => {
-                    const cost = calculateTaskCost(task.id);
+      <Card>
+        <CardHeader>
+          <CardTitle>Total Project Cost (task-wise)</CardTitle>
+          <CardDescription>
+            {loading ? "Loading…" : "All costs are derived from current allocations."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <TableWrapper>
+            {loading ? (
+              <div className="px-6 py-10 text-center text-sm text-muted-foreground">Loading…</div>
+            ) : tasks.length === 0 ? (
+              <div className="p-6">
+                <EmptyState icon={PieChartIcon} title="No tasks to display" description="Add tasks and allocate resources first." />
+              </div>
+            ) : (
+              <Table>
+                <THead>
+                  <TR>
+                    <TH className="w-16">ID</TH>
+                    <TH>Task Name</TH>
+                    <TH>Duration</TH>
+                    <TH>Start Date</TH>
+                    <TH>Finish Date</TH>
+                    <TH>Resources</TH>
+                    <TH className="text-right">Total Cost</TH>
+                  </TR>
+                </THead>
+                <TBody>
+                  {tasks.map((task) => {
+                    const cost = calculateTaskCost(task, resources, allocations);
+                    const names = getResourceNamesForTask(task.id, resources, allocations);
                     return (
-                      <tr key={task.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{task.id}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{task.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{task.duration}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{task.startDate}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{task.finishDate}</td>
-                        <td className="px-6 py-4 text-sm text-gray-900">{getResourceNames(task.id)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                          ${cost.toLocaleString()}
-                        </td>
-                      </tr>
+                      <TR key={task.id}>
+                        <TD className="font-medium text-muted-foreground">#{task.id}</TD>
+                        <TD className="font-medium text-foreground">{task.name}</TD>
+                        <TD className="whitespace-nowrap">{task.duration} days</TD>
+                        <TD className="whitespace-nowrap">{formatDate(task.startDate)}</TD>
+                        <TD className="whitespace-nowrap">{formatDate(task.finishDate)}</TD>
+                        <TD className={names === "None" ? "text-muted-foreground" : ""}>{names}</TD>
+                        <TD className="whitespace-nowrap text-right font-semibold text-foreground">
+                          {formatCurrency(cost)}
+                        </TD>
+                      </TR>
                     );
-                  })
-                )}
-              </tbody>
-              <tfoot className="bg-gray-100 font-bold">
-                <tr>
-                  <td colSpan={6} className="px-6 py-4 text-right text-sm text-gray-900">Total Cost</td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    ${calculateTotalProjectCost().toLocaleString()}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
-      </div>
+                  })}
+                </TBody>
+                <TFoot>
+                  <TR>
+                    <TD colSpan={6} className="text-right text-sm font-semibold">Total Project Cost</TD>
+                    <TD className="whitespace-nowrap text-right text-base font-bold text-foreground">
+                      {formatCurrency(total)}
+                    </TD>
+                  </TR>
+                </TFoot>
+              </Table>
+            )}
+          </TableWrapper>
+        </CardContent>
+      </Card>
     </div>
   );
 }
