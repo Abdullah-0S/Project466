@@ -106,27 +106,23 @@ export default function AllocatePage() {
     <div className="mx-auto w-full max-w-7xl">
       <PageHeader
         title="Allocate Resources"
-        description="Check the resources that each task will consume. Cost updates live."
       />
 
       <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
         <StatCard
           label="Total Project Cost"
           value={loadingTasks ? "—" : formatCurrency(totalCost)}
-          hint="Rate × 8h × Avail × Duration + Cost/Use"
           icon={DollarSign}
           accent="success"
         />
         <StatCard
           label="Allocated Tasks"
           value={loadingTasks ? "—" : `${allocatedCount} / ${tasks.length}`}
-          hint="Tasks with ≥1 resource"
           icon={Link2}
         />
         <StatCard
           label="Resources"
           value={loadingTasks ? "—" : resources.length}
-          hint="Available to assign"
           icon={Users}
           accent="warning"
         />
@@ -210,7 +206,7 @@ export default function AllocatePage() {
                                 {resource.name}
                               </span>
                               {resource.type ? (
-                                <Badge variant={resource.type === "Work" ? "default" : "outline"}>
+                                <Badge variant={resource.type === "Work" ? "default" : resource.type === "Material" ? "secondary" : "outline"}>
                                   {resource.type}
                                 </Badge>
                               ) : null}
@@ -218,7 +214,9 @@ export default function AllocatePage() {
                             <p className="truncate text-xs text-muted-foreground">
                               {resource.type === "Cost"
                                 ? `Cost/Use: ${resource.costUse || "—"}`
-                                : `${resource.stRate || "—"} · ${resource.max || "—"}`}
+                                : resource.type === "Material"
+                                  ? `Rate: ${resource.stRate || "—"}`
+                                  : `${resource.stRate || "—"} · Availability: ${resource.max || "—"}`}
                             </p>
                           </div>
                         </label>

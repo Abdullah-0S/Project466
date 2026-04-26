@@ -64,6 +64,10 @@ export const calculateResourceCost = (resource: Resource, durationDays: number):
   if (resource.type === "Cost") {
     return parseCostUse(resource.costUse);
   }
+  if (resource.type === "Material") {
+    // Material cost: fixed cost (like Cost/Use), not multiplied by duration
+    return parseHourlyRate(resource.stRate);
+  }
   return 0;
 };
 

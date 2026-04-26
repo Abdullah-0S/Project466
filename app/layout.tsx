@@ -11,8 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "ProManage — Project Management",
-  description: "Plan tasks, manage resources, and track project costs.",
+  title: "Project Management",
 };
 
 export default function RootLayout({

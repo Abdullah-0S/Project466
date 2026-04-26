@@ -2,7 +2,10 @@ export const addDaysToDate = (dateStr: string, days: number): string => {
   if (!dateStr) return "";
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) return "";
-  date.setDate(date.getDate() + days);
+  // For inclusive day counting: if duration is N days, finish is start + (N - 1)
+  // Duration 0 or 1: finish = start (same day)
+  // Duration 6: finish = start + 5
+  date.setDate(date.getDate() + Math.max(0, days - 1));
   return date.toISOString().split("T")[0];
 };
 
