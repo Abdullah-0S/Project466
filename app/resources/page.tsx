@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
+import { Users, Pencil, Trash2, X, Plus } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input, Select } from "@/components/ui/input";
+import { FormField } from "@/components/ui/form-field";
+import { Table, TableWrapper, THead, TBody, TR, TH, TD } from "@/components/ui/table";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface Resource {
   id: number;
@@ -9,83 +18,51 @@ interface Resource {
   type: string;
   max: string;
   stRate: string;
+  ovtRate: string;
   costUse: string;
 }
 
+const STORAGE_KEY = "resources";
+const emptyForm = { name: "", type: "", max: "", stRate: "", ovtRate: "", costUse: "" };
+
 export default function ResourcesPage() {
   const [resources, setResources] = useState<Resource[]>([]);
-  const [formData, setFormData] = useState({
-    name: "",
-    type: "",
-    max: "",
-    stRate: "",
-    costUse: "",
-  });
+  const [formData, setFormData] = useState(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
-
-  const STORAGE_KEY = "resources";
   const isLoaded = useRef(false);
 
-  // Load resources from localStorage on mount
   useEffect(() => {
-    console.log("Resources page - Starting load...");
-
     const saved = localStorage.getItem(STORAGE_KEY);
-
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        setResources(parsed);
+        setResources(JSON.parse(saved));
       } catch (e) {
         console.error("Error parsing resources:", e);
       }
-    } else {
-      setResources([]);
     }
-
-    console.log("Load complete - resources:", saved);
-
-    // Mark as loaded after state is set
     setTimeout(() => {
       isLoaded.current = true;
-      console.log("Marked as loaded");
     }, 100);
   }, []);
 
-  // Save resources to localStorage
   useEffect(() => {
-    // Skip save during initial load
-    if (!isLoaded.current) {
-      return;
-    }
-
-    // Only save if there are resources
-    if (resources.length === 0) {
-      return;
-    }
-
+    if (!isLoaded.current) return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(resources));
   }, [resources]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
     if (editingId) {
-      setResources(resources.map(res =>
-        res.id === editingId
-          ? { ...res, ...formData }
-          : res
-      ));
+      setResources(resources.map((res) => (res.id === editingId ? { ...res, ...formData } : res)));
       setEditingId(null);
     } else {
       const newResource: Resource = {
-        id: resources.length > 0 ? Math.max(...resources.map(r => r.id)) + 1 : 1,
+        id: resources.length > 0 ? Math.max(...resources.map((r) => r.id)) + 1 : 1,
         ...formData,
       };
       setResources([...resources, newResource]);
     }
-
-    setFormData({ name: "", type: "", max: "", stRate: "", costUse: "" });
+    setFormData(emptyForm);
   };
 
   const handleEdit = (resource: Resource) => {
@@ -95,167 +72,202 @@ export default function ResourcesPage() {
       type: resource.type,
       max: resource.max,
       stRate: resource.stRate,
+      ovtRate: resource.ovtRate || "",
       costUse: resource.costUse,
     });
   };
 
   const handleDelete = (id: number) => {
-    if (confirm("Are you sure you want to delete this resource?")) {
-      setResources(resources.filter(res => res.id !== id));
+    if (!confirm("Are you sure you want to delete this resource?")) return;
+    setResources(resources.filter((res) => res.id !== id));
+    if (editingId === id) {
+      setEditingId(null);
+      setFormData(emptyForm);
     }
   };
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setFormData({ name: "", type: "", max: "", stRate: "", costUse: "" });
+    setFormData(emptyForm);
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="bg-primary text-white p-6 shadow-lg">
-        <Link href="/" className="text-blue-200 hover:text-white mb-4 inline-block">← Back to Home</Link>
-        <h1 className="text-3xl font-bold mt-2">Resource Management</h1>
-      </div>
+    <div className="mx-auto w-full max-w-6xl">
+      <PageHeader
+        title="Resources"
+        description="Define people and materials with their rates and availability."
+      />
 
-      <div className="container mx-auto mt-8 p-6">
-        {/* Add/Edit Form */}
-        <div className="bg-white p-6 rounded-lg shadow mb-8">
-          <h2 className="text-xl font-semibold mb-4">
-            {editingId ? "Edit Resource" : "Add New Resource"}
-          </h2>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Resource Name</label>
-              <input
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>{editingId ? "Edit Resource" : "Add New Resource"}</CardTitle>
+          <CardDescription>
+            {editingId
+              ? `Updating resource #${editingId}.`
+              : "Work resources have hourly rates; Cost resources have a fixed cost per use."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <FormField label="Resource Name" htmlFor="res-name">
+              <Input
+                id="res-name"
                 type="text"
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-primary focus:border-primary"
                 placeholder="e.g., Project Manager"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-              <select
+            </FormField>
+            <FormField label="Type" htmlFor="res-type">
+              <Select
+                id="res-type"
                 required
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-primary focus:border-primary"
               >
-                <option value="">Select Type</option>
+                <option value="">Select type…</option>
                 <option value="Work">Work</option>
                 <option value="Cost">Cost</option>
-                <option value="Material">Material</option>
-                <option value="Equipment">Equipment</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Max (Availability)</label>
-              <input
+              </Select>
+            </FormField>
+            <FormField
+              label="Max (Availability)"
+              htmlFor="res-max"
+              hint="Use % for availability (e.g. 100%, 50%)"
+            >
+              <Input
+                id="res-max"
                 type="text"
                 required
                 value={formData.max}
                 onChange={(e) => setFormData({ ...formData, max: e.target.value })}
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-primary focus:border-primary"
                 placeholder="e.g., 100%"
               />
-              <p className="text-xs text-gray-500">Use % for availability (e.g., 100%, 50%)</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">St. Rate</label>
-              <input
+            </FormField>
+            <FormField label="St. Rate" htmlFor="res-strate" hint="Hourly rate (e.g. 15 for $15/hr)">
+              <Input
+                id="res-strate"
                 type="text"
                 value={formData.stRate}
                 onChange={(e) => setFormData({ ...formData, stRate: e.target.value })}
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-primary focus:border-primary"
                 placeholder="e.g., 15 or 15$/hr"
               />
-              <p className="text-xs text-gray-500">Hourly rate (e.g., 15 for $15/hr)</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cost/Use</label>
-              <input
+            </FormField>
+            <FormField label="Ovt. Rate" htmlFor="res-ovtrate" hint="Overtime rate (optional)">
+              <Input
+                id="res-ovtrate"
+                type="text"
+                value={formData.ovtRate}
+                onChange={(e) => setFormData({ ...formData, ovtRate: e.target.value })}
+                placeholder="e.g., 22$/hr"
+              />
+            </FormField>
+            <FormField label="Cost / Use" htmlFor="res-cost" hint="Fixed cost per use (optional)">
+              <Input
+                id="res-cost"
                 type="text"
                 value={formData.costUse}
                 onChange={(e) => setFormData({ ...formData, costUse: e.target.value })}
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-primary focus:border-primary"
                 placeholder="e.g., 1000"
               />
-              <p className="text-xs text-gray-500">Fixed cost per use (optional)</p>
-            </div>
-            <div className="md:col-span-2 lg:col-span-5 flex gap-2">
-              <button
-                type="submit"
-                className="bg-primary text-white px-6 py-2 rounded hover:bg-blue-600 transition-colors"
-              >
+            </FormField>
+            <div className="md:col-span-2 lg:col-span-3 flex flex-wrap items-center gap-2 pt-1">
+              <Button type="submit">
+                {editingId ? <Pencil /> : <Plus />}
                 {editingId ? "Update Resource" : "Add Resource"}
-              </button>
-              {editingId && (
-                <button
-                  type="button"
-                  onClick={handleCancelEdit}
-                  className="bg-gray-400 text-white px-6 py-2 rounded hover:bg-gray-500 transition-colors"
-                >
-                  Cancel
-                </button>
-              )}
+              </Button>
+              {editingId ? (
+                <Button type="button" variant="outline" onClick={handleCancelEdit}>
+                  <X /> Cancel
+                </Button>
+              ) : null}
             </div>
           </form>
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* Resources Table */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="p-6 border-b">
-            <h2 className="text-xl font-semibold">All Resources</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Resource Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Max (Availability)</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">St. Rate ($/hr)</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost/Use</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {resources.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500">No resources yet. Add your first resource above.</td>
-                  </tr>
-                ) : (
-                  resources.map((resource) => (
-                    <tr key={resource.id} className={editingId === resource.id ? "bg-blue-50" : ""}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{resource.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{resource.type}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{resource.max}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{resource.stRate}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{resource.costUse}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
-                        <button
-                          onClick={() => handleEdit(resource)}
-                          className="text-blue-600 hover:text-blue-800"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(resource.id)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>All Resources</CardTitle>
+          <CardDescription>
+            {resources.length === 0
+              ? "No resources yet."
+              : `${resources.length} ${resources.length === 1 ? "resource" : "resources"} on file.`}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <TableWrapper>
+            {resources.length === 0 ? (
+              <div className="p-6">
+                <EmptyState
+                  icon={Users}
+                  title="No resources yet"
+                  description="Add people or materials via the form above."
+                />
+              </div>
+            ) : (
+              <Table>
+                <THead>
+                  <TR>
+                    <TH>Name</TH>
+                    <TH>Type</TH>
+                    <TH>Max</TH>
+                    <TH>St. Rate</TH>
+                    <TH>Ovt. Rate</TH>
+                    <TH>Cost / Use</TH>
+                    <TH className="text-right">Actions</TH>
+                  </TR>
+                </THead>
+                <TBody>
+                  {resources.map((r) => (
+                    <TR
+                      key={r.id}
+                      className={cn(editingId === r.id && "bg-primary/5 hover:bg-primary/10")}
+                    >
+                      <TD className="font-medium text-foreground">{r.name}</TD>
+                      <TD>
+                        {r.type ? (
+                          <Badge variant={r.type === "Work" ? "default" : "outline"}>{r.type}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TD>
+                      <TD>{r.max || "—"}</TD>
+                      <TD>{r.stRate || "—"}</TD>
+                      <TD>{r.ovtRate || "—"}</TD>
+                      <TD>{r.costUse || "—"}</TD>
+                      <TD className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleEdit(r)}
+                            aria-label={`Edit ${r.name}`}
+                            title="Edit"
+                          >
+                            <Pencil />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleDelete(r.id)}
+                            aria-label={`Delete ${r.name}`}
+                            title="Delete"
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            <Trash2 />
+                          </Button>
+                        </div>
+                      </TD>
+                    </TR>
+                  ))}
+                </TBody>
+              </Table>
+            )}
+          </TableWrapper>
+        </CardContent>
+      </Card>
     </div>
   );
 }

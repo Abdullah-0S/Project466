@@ -1,70 +1,75 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
-
-interface Task {
-  id: number;
-  name: string;
-  duration: string;
-  startDate: string;
-  finishDate: string;
-}
+import { ListTodo } from "lucide-react";
+import { Task } from "@/lib/cost";
+import { PageHeader } from "@/components/ui/page-header";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableWrapper, THead, TBody, TR, TH, TD } from "@/components/ui/table";
+import { EmptyState } from "@/components/ui/empty-state";
+import { formatDate } from "@/lib/dates";
 
 export default function ReportTasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const saved = localStorage.getItem("tasks");
-    if (saved) {
-      setTasks(JSON.parse(saved));
-    }
+    fetch("/api/tasks")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: Task[]) => setTasks(data))
+      .catch((err) => console.error("Failed to fetch tasks:", err))
+      .finally(() => setLoading(false));
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="bg-primary text-white p-6 shadow-lg">
-        <Link href="/" className="text-blue-200 hover:text-white mb-4 inline-block">← Back to Home</Link>
-        <h1 className="text-3xl font-bold mt-2">Report: All Tasks</h1>
-      </div>
+    <div className="mx-auto w-full max-w-6xl">
+      <PageHeader
+        title="Report — All Tasks"
+        description="Read-only list of every task."
+      />
 
-      <div className="container mx-auto mt-8 p-6">
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="p-6 border-b">
-            <h2 className="text-xl font-semibold">All Tasks (View Only)</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start (Date)</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Finish (Date)</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {tasks.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-4 text-center text-gray-500">No tasks to display.</td>
-                  </tr>
-                ) : (
-                  tasks.map((task) => (
-                    <tr key={task.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{task.id}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{task.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{task.duration}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{task.startDate}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{task.finishDate}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>All Tasks</CardTitle>
+          <CardDescription>
+            {loading ? "Loading…" : `${tasks.length} ${tasks.length === 1 ? "task" : "tasks"}.`}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <TableWrapper>
+            {loading ? (
+              <div className="px-6 py-10 text-center text-sm text-muted-foreground">Loading…</div>
+            ) : tasks.length === 0 ? (
+              <div className="p-6">
+                <EmptyState icon={ListTodo} title="No tasks to display" description="Add tasks first to see them here." />
+              </div>
+            ) : (
+              <Table>
+                <THead>
+                  <TR>
+                    <TH className="w-16">ID</TH>
+                    <TH>Task Name</TH>
+                    <TH>Duration</TH>
+                    <TH>Start Date</TH>
+                    <TH>Finish Date</TH>
+                  </TR>
+                </THead>
+                <TBody>
+                  {tasks.map((task) => (
+                    <TR key={task.id}>
+                      <TD className="font-medium text-muted-foreground">#{task.id}</TD>
+                      <TD className="font-medium text-foreground">{task.name}</TD>
+                      <TD className="whitespace-nowrap">{task.duration} days</TD>
+                      <TD className="whitespace-nowrap">{formatDate(task.startDate)}</TD>
+                      <TD className="whitespace-nowrap">{formatDate(task.finishDate)}</TD>
+                    </TR>
+                  ))}
+                </TBody>
+              </Table>
+            )}
+          </TableWrapper>
+        </CardContent>
+      </Card>
     </div>
   );
 }
