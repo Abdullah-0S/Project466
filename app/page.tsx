@@ -55,26 +55,22 @@ export default function DashboardPage() {
         <StatCard
           label="Total Tasks"
           value={loading ? "—" : tasks.length}
-          hint={loading ? undefined : tasks.length === 1 ? "1 task" : `${tasks.length} tasks planned`}
           icon={ListTodo}
         />
         <StatCard
           label="Resources"
           value={loading ? "—" : resources.length}
-          hint={loading ? undefined : resources.length === 1 ? "1 resource" : `${resources.length} resources on file`}
           icon={Users}
           accent="warning"
         />
         <StatCard
           label="Allocated Tasks"
           value={loading ? "—" : `${allocatedTasks} / ${tasks.length}`}
-          hint={loading ? undefined : "Tasks with ≥1 resource"}
           icon={Link2}
         />
         <StatCard
           label="Total Project Cost"
           value={loading ? "—" : formatCurrency(totalCost)}
-          hint="Rate × 8h × Avail × Duration + Cost/Use"
           icon={DollarSign}
           accent="success"
         />
@@ -123,9 +119,8 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CalendarDays className="h-5 w-5 text-primary" />
-              Upcoming Tasks
+              Tasks
             </CardTitle>
-            <CardDescription>Next 5 tasks by start date.</CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (

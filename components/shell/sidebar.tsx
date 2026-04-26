@@ -62,10 +62,7 @@ export function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
             <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
               <Briefcase className="h-4 w-4" />
             </div>
-            <div className="flex flex-col leading-none">
-              <span className="text-sm font-semibold tracking-tight">ProManage</span>
-              <span className="text-xs text-muted-foreground">Project Management</span>
-            </div>
+            <span className="text-sm font-semibold tracking-tight">Project Management</span>
           </Link>
           <Button
             variant="ghost"

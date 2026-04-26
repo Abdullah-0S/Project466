@@ -106,17 +106,11 @@ export default function TasksPage() {
     <div className="mx-auto w-full max-w-6xl">
       <PageHeader
         title="Tasks"
-        description="Plan project tasks with durations and dates."
       />
 
       <Card className="mb-6">
         <CardHeader>
           <CardTitle>{editingId ? "Edit Task" : "Add New Task"}</CardTitle>
-          <CardDescription>
-            {editingId
-              ? `Updating task #${editingId}.`
-              : "Enter task details. Duration and finish date auto-sync with the start date."}
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">

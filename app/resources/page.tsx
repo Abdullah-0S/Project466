@@ -95,17 +95,11 @@ export default function ResourcesPage() {
     <div className="mx-auto w-full max-w-6xl">
       <PageHeader
         title="Resources"
-        description="Define people and materials with their rates and availability."
       />
 
       <Card className="mb-6">
         <CardHeader>
           <CardTitle>{editingId ? "Edit Resource" : "Add New Resource"}</CardTitle>
-          <CardDescription>
-            {editingId
-              ? `Updating resource #${editingId}.`
-              : "Work resources have hourly rates; Cost resources have a fixed cost per use."}
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -129,49 +123,59 @@ export default function ResourcesPage() {
                 <option value="">Select type…</option>
                 <option value="Work">Work</option>
                 <option value="Cost">Cost</option>
+                <option value="Material">Material</option>
               </Select>
             </FormField>
-            <FormField
-              label="Max (Availability)"
-              htmlFor="res-max"
-              hint="Use % for availability (e.g. 100%, 50%)"
-            >
-              <Input
-                id="res-max"
-                type="text"
-                required
-                value={formData.max}
-                onChange={(e) => setFormData({ ...formData, max: e.target.value })}
-                placeholder="e.g., 100%"
-              />
-            </FormField>
-            <FormField label="St. Rate" htmlFor="res-strate" hint="Hourly rate (e.g. 15 for $15/hr)">
-              <Input
-                id="res-strate"
-                type="text"
-                value={formData.stRate}
-                onChange={(e) => setFormData({ ...formData, stRate: e.target.value })}
-                placeholder="e.g., 15 or 15$/hr"
-              />
-            </FormField>
-            <FormField label="Ovt. Rate" htmlFor="res-ovtrate" hint="Overtime rate (optional)">
-              <Input
-                id="res-ovtrate"
-                type="text"
-                value={formData.ovtRate}
-                onChange={(e) => setFormData({ ...formData, ovtRate: e.target.value })}
-                placeholder="e.g., 22$/hr"
-              />
-            </FormField>
-            <FormField label="Cost / Use" htmlFor="res-cost" hint="Fixed cost per use (optional)">
-              <Input
-                id="res-cost"
-                type="text"
-                value={formData.costUse}
-                onChange={(e) => setFormData({ ...formData, costUse: e.target.value })}
-                placeholder="e.g., 1000"
-              />
-            </FormField>
+            {formData.type === "Work" && (
+              <FormField
+                label="Max (Availability)"
+                htmlFor="res-max"
+              >
+                <Input
+                  id="res-max"
+                  type="text"
+                  required
+                  value={formData.max}
+                  onChange={(e) => setFormData({ ...formData, max: e.target.value })}
+                  placeholder="e.g., 100%"
+                />
+              </FormField>
+            )}
+            {(formData.type === "Work" || formData.type === "Material") && (
+              <FormField label="St. Rate" htmlFor="res-strate">
+                <Input
+                  id="res-strate"
+                  type="text"
+                  required={formData.type === "Material"}
+                  value={formData.stRate}
+                  onChange={(e) => setFormData({ ...formData, stRate: e.target.value })}
+                  placeholder={formData.type === "Work" ? "e.g., 15 or 15$/hr" : "e.g., 50"}
+                />
+              </FormField>
+            )}
+            {formData.type === "Work" && (
+              <FormField label="Ovt. Rate" htmlFor="res-ovtrate">
+                <Input
+                  id="res-ovtrate"
+                  type="text"
+                  value={formData.ovtRate}
+                  onChange={(e) => setFormData({ ...formData, ovtRate: e.target.value })}
+                  placeholder="e.g., 22$/hr"
+                />
+              </FormField>
+            )}
+            {formData.type === "Cost" && (
+              <FormField label="Cost / Use" htmlFor="res-cost">
+                <Input
+                  id="res-cost"
+                  type="text"
+                  required
+                  value={formData.costUse}
+                  onChange={(e) => setFormData({ ...formData, costUse: e.target.value })}
+                  placeholder="e.g., 1000"
+                />
+              </FormField>
+            )}
             <div className="md:col-span-2 lg:col-span-3 flex flex-wrap items-center gap-2 pt-1">
               <Button type="submit">
                 {editingId ? <Pencil /> : <Plus />}
@@ -212,7 +216,7 @@ export default function ResourcesPage() {
                   <TR>
                     <TH>Name</TH>
                     <TH>Type</TH>
-                    <TH>Max</TH>
+                    <TH>Max / Qty</TH>
                     <TH>St. Rate</TH>
                     <TH>Ovt. Rate</TH>
                     <TH>Cost / Use</TH>
@@ -228,15 +232,15 @@ export default function ResourcesPage() {
                       <TD className="font-medium text-foreground">{r.name}</TD>
                       <TD>
                         {r.type ? (
-                          <Badge variant={r.type === "Work" ? "default" : "outline"}>{r.type}</Badge>
+                          <Badge variant={r.type === "Work" ? "default" : r.type === "Material" ? "secondary" : "outline"}>{r.type}</Badge>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
                       </TD>
                       <TD>{r.max || "—"}</TD>
                       <TD>{r.stRate || "—"}</TD>
-                      <TD>{r.ovtRate || "—"}</TD>
-                      <TD>{r.costUse || "—"}</TD>
+                      <TD>{r.type === "Work" ? (r.ovtRate || "—") : "—"}</TD>
+                      <TD>{r.type === "Cost" ? (r.costUse || "—") : "—"}</TD>
                       <TD className="text-right">
                         <div className="flex justify-end gap-1">
                           <Button
