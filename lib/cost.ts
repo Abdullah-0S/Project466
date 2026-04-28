@@ -12,7 +12,6 @@ export interface Resource {
   type: string;
   max: string;
   stRate: string;
-  ovtRate?: string;
   costUse: string;
 }
 
@@ -34,7 +33,8 @@ export const parseAvailability = (max: string): number => {
   const match = max.match(/(\d+(?:\.\d+)?)\s*%/);
   if (match) return parseFloat(match[1]) / 100;
   const raw = parseFloat(max);
-  return isNaN(raw) ? 1 : raw;
+  if (isNaN(raw)) return 1;
+  return raw / 100;
 };
 
 export const parseCostUse = (costUse: string): number => {

@@ -18,12 +18,11 @@ interface Resource {
   type: string;
   max: string;
   stRate: string;
-  ovtRate: string;
   costUse: string;
 }
 
 const STORAGE_KEY = "resources";
-const emptyForm = { name: "", type: "", max: "", stRate: "", ovtRate: "", costUse: "" };
+const emptyForm = { name: "", type: "", max: "", stRate: "", costUse: "" };
 
 export default function ResourcesPage() {
   const [resources, setResources] = useState<Resource[]>([]);
@@ -72,7 +71,6 @@ export default function ResourcesPage() {
       type: resource.type,
       max: resource.max,
       stRate: resource.stRate,
-      ovtRate: resource.ovtRate || "",
       costUse: resource.costUse,
     });
   };
@@ -90,6 +88,22 @@ export default function ResourcesPage() {
     setEditingId(null);
     setFormData(emptyForm);
   };
+
+  const handleTypeChange = (type: string) => {
+    if (type === "Work") {
+      setFormData({ ...formData, type, costUse: "" });
+    } else if (type === "Cost") {
+      setFormData({ ...formData, type, max: "", stRate: "" });
+    } else if (type === "Material") {
+      setFormData({ ...formData, type, max: "", costUse: "" });
+    } else {
+      setFormData({ ...formData, type });
+    }
+  };
+
+  const isWork = formData.type === "Work";
+  const isCost = formData.type === "Cost";
+  const isMaterial = formData.type === "Material";
 
   return (
     <div className="mx-auto w-full max-w-6xl">
@@ -118,7 +132,7 @@ export default function ResourcesPage() {
                 id="res-type"
                 required
                 value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                onChange={(e) => handleTypeChange(e.target.value)}
               >
                 <option value="">Select type…</option>
                 <option value="Work">Work</option>
@@ -126,10 +140,11 @@ export default function ResourcesPage() {
                 <option value="Material">Material</option>
               </Select>
             </FormField>
-            {formData.type === "Work" && (
+            {isWork && (
               <FormField
                 label="Max (Availability)"
                 htmlFor="res-max"
+                hint="Use % for availability (e.g. 100%, 50%)"
               >
                 <Input
                   id="res-max"
@@ -141,31 +156,24 @@ export default function ResourcesPage() {
                 />
               </FormField>
             )}
-            {(formData.type === "Work" || formData.type === "Material") && (
-              <FormField label="St. Rate" htmlFor="res-strate">
+            {(isWork || isMaterial) && (
+              <FormField
+                label="St. Rate"
+                htmlFor="res-strate"
+                hint={isWork ? "Hourly rate (e.g. 15 for $15/hr)" : "Fixed cost per unit"}
+              >
                 <Input
                   id="res-strate"
                   type="text"
-                  required={formData.type === "Material"}
+                  required
                   value={formData.stRate}
                   onChange={(e) => setFormData({ ...formData, stRate: e.target.value })}
-                  placeholder={formData.type === "Work" ? "e.g., 15 or 15$/hr" : "e.g., 50"}
+                  placeholder={isWork ? "e.g., 15 or 15$/hr" : "e.g., 50"}
                 />
               </FormField>
             )}
-            {formData.type === "Work" && (
-              <FormField label="Ovt. Rate" htmlFor="res-ovtrate">
-                <Input
-                  id="res-ovtrate"
-                  type="text"
-                  value={formData.ovtRate}
-                  onChange={(e) => setFormData({ ...formData, ovtRate: e.target.value })}
-                  placeholder="e.g., 22$/hr"
-                />
-              </FormField>
-            )}
-            {formData.type === "Cost" && (
-              <FormField label="Cost / Use" htmlFor="res-cost">
+            {isCost && (
+              <FormField label="Cost / Use" htmlFor="res-cost" hint="Fixed cost per use">
                 <Input
                   id="res-cost"
                   type="text"
@@ -218,7 +226,6 @@ export default function ResourcesPage() {
                     <TH>Type</TH>
                     <TH>Max / Qty</TH>
                     <TH>St. Rate</TH>
-                    <TH>Ovt. Rate</TH>
                     <TH>Cost / Use</TH>
                     <TH className="text-right">Actions</TH>
                   </TR>
@@ -239,8 +246,7 @@ export default function ResourcesPage() {
                       </TD>
                       <TD>{r.max || "—"}</TD>
                       <TD>{r.stRate || "—"}</TD>
-                      <TD>{r.type === "Work" ? (r.ovtRate || "—") : "—"}</TD>
-                      <TD>{r.type === "Cost" ? (r.costUse || "—") : "—"}</TD>
+                      <TD>{r.costUse || "—"}</TD>
                       <TD className="text-right">
                         <div className="flex justify-end gap-1">
                           <Button

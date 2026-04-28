@@ -85,15 +85,18 @@ export function deleteTask(id: number): void {
   database.prepare('DELETE FROM tasks WHERE id = ?').run(id);
 }
 
-// Renumber tasks after deletion
+// Renumber tasks after deletion so Task IDs stay 1..N (matches PDF sample)
 export function renumberTasks(): void {
   const database = getDatabase();
   const tasks = database.prepare('SELECT * FROM tasks ORDER BY id').all() as Task[];
-  let newId = 1;
-  tasks.forEach(task => {
+  tasks.forEach((task, index) => {
+    const newId = index + 1;
     if (task.id !== newId) {
       database.prepare('UPDATE tasks SET id = ? WHERE id = ?').run(newId, task.id);
     }
-    newId++;
   });
+  // Keep AUTOINCREMENT seed aligned with the actual max id so the next POST gets max+1.
+  // sqlite_sequence.name has no UNIQUE constraint, so INSERT OR REPLACE would duplicate —
+  // delete the row(s) and SQLite re-creates one on the next INSERT starting at max(id)+1.
+  database.prepare("DELETE FROM sqlite_sequence WHERE name = 'tasks'").run();
 }

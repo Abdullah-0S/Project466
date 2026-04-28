@@ -14,7 +14,6 @@ interface Resource {
   type: string;
   max: string;
   stRate: string;
-  ovtRate?: string;
   costUse: string;
 }
 
@@ -62,7 +61,6 @@ export default function ReportResourcesPage() {
                     <TH>Type</TH>
                     <TH>Max</TH>
                     <TH>St. Rate</TH>
-                    <TH>Ovt. Rate</TH>
                     <TH>Cost / Use</TH>
                   </TR>
                 </THead>
@@ -79,7 +77,6 @@ export default function ReportResourcesPage() {
                       </TD>
                       <TD>{r.max || "—"}</TD>
                       <TD>{r.stRate || "—"}</TD>
-                      <TD>{r.ovtRate || "—"}</TD>
                       <TD>{r.costUse || "—"}</TD>
                     </TR>
                   ))}
